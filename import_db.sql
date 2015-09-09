@@ -51,7 +51,8 @@ INSERT INTO
   questions (title, body, author_id)
 VALUES
   ('I have a question', 'how does this work?', 1),
-  ('I have another question', 'does this work?', 2);
+  ('I have another question', 'does this work?', 2),
+  ('Roll call!', 'Who is here?', 2);
 
 INSERT INTO
   replies (question_id, parent_reply_id, author_id, body)

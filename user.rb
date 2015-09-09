@@ -3,7 +3,8 @@ require_relative 'question'
 require_relative 'reply'
 require_relative 'question_follow'
 
-class User
+class User < SQLObject
+  TABLE_NAME = 'users'
 
   def self.find_by_name(fname, lname)
     attributes = QuestionsDatabase.instance.execute(<<-SQL, fname, lname).first
@@ -18,26 +19,37 @@ class User
     User.new(attributes)
   end
 
-  def self.find_by_id(id)
-    attributes = QuestionsDatabase.instance.execute(<<-SQL, id).first
-      SELECT
-        *
-      FROM
-        users
-      WHERE
-        id = ?
-    SQL
-
-    User.new(attributes)
-  end
-
 attr_accessor :fname, :lname
+attr_reader :id
 
-  def initialize(attributes)
+  def initialize(attributes = {})
     @id = attributes[ "id" ]
     @fname = attributes[ "fname" ]
     @lname = attributes[ "lname"]
   end
+
+  def save
+    if self.id.nil?
+      QuestionsDatabase.instance.execute(<<-SQL, fname, lname)
+        INSERT INTO
+          users (fname, lname)
+        VALUES
+          (? , ?)
+      SQL
+
+      @id = QuestionsDatabase.instance.last_insert_row_id
+    else
+      QuestionsDatabase.instance.execute(<<-SQL, fname, lname, id)
+        UPDATE
+          users
+        SET
+          fname = ?, lname = ?
+        WHERE
+          users.id = ?
+      SQL
+    end
+end
+
 
   def authored_questions
     Question::find_by_author_id(@id)
@@ -56,22 +68,22 @@ attr_accessor :fname, :lname
   end
 
   def average_karma
-    question_likes_count = QuestionsDatabase.instance.execute(<<-SQL)
-      SELECT
-        questions.id,
-        COUNT(DISTINCT(question_likes.user_id))
-      FROM
-        questions
-      LEFT OUTER JOIN
-        question_likes ON questions.id = question_likes.question_id
-      GROUP BY
-        questions.id
-    SQL
+    # question_likes_count = QuestionsDatabase.instance.execute(<<-SQL)
+    #   SELECT
+    #     questions.id,
+    #     COUNT(DISTINCT(question_likes.user_id))
+    #   FROM
+    #     questions
+    #   LEFT OUTER JOIN
+    #     question_likes ON questions.id = question_likes.question_id
+    #   GROUP BY
+    #     questions.id
+    # SQL
 
     user_questions_count = QuestionsDatabase.instance.execute(<<-SQL)
       SELECT
-        users.id,
-        question.id,
+        questions.author_id user,
+        questions.id question,
         COUNT(questions.id)
       FROM
         users

@@ -2,19 +2,8 @@ require_relative 'questions_database'
 require_relative 'question'
 require_relative 'user'
 
-class QuestionFollow
-  def self.find_by_id(id)
-    attributes = QuestionsDatabase.instance.execute(<<-SQL, id).first
-      SELECT
-        *
-      FROM
-        question_follows
-      WHERE
-        id = ?
-    SQL
-
-    QuestionFollow.new(attributes)
-  end
+class QuestionFollow < SQLObject
+  TABLE_NAME = 'question_follows'
 
   def self.followers_for_question_id(question_id)
     attributes = QuestionsDatabase.instance.execute(<<-SQL, question_id)
@@ -66,7 +55,7 @@ class QuestionFollow
 
     attributes.map { |result| Question.new(result) }
   end
-  
+
   attr_accessor :user_id, :question_id
 
   def initialize(attributes)

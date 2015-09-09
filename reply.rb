@@ -2,21 +2,9 @@ require_relative 'questions_database'
 require_relative 'user'
 require_relative 'question'
 
-class Reply
-  def self.find_by_id(id)
-    attributes = QuestionsDatabase.instance.execute(<<-SQL, id).first
-      SELECT
-        *
-      FROM
-        replies
-      WHERE
-        id = ?
-    SQL
-
-    return nil unless attributes
-    Reply.new(attributes)
-  end
-
+class Reply < SQLObject
+  TABLE_NAME = 'replies'
+  
   def self.find_by_user_id(author_id)
     attributes = QuestionsDatabase.instance.execute(<<-SQL, author_id)
       SELECT
@@ -46,6 +34,7 @@ class Reply
   end
 
   attr_accessor :question_id, :parent_reply_id, :author_id, :body
+  attr_reader :id
 
   def initialize(attributes)
     @id = attributes[ "id" ]
@@ -53,6 +42,28 @@ class Reply
     @parent_reply_id = attributes[ "parent_reply_id" ]
     @author_id = attributes[ "author_id" ]
     @body = attributes[ "body"]
+  end
+
+  def save
+    if self.id.nil?
+      QuestionsDatabase.instance.execute(<<-SQL, question_id, parent_reply_id, author_id, body)
+        INSERT INTO
+          replies (question_id, parent_reply_id, author_id, body)
+        VALUES
+          (?, ?, ?, ?)
+      SQL
+
+      @id = QuestionsDatabase.instance.last_insert_row_id
+    else
+      QuestionsDatabase.instance.execute(<<-SQL, question_id, parent_reply_id, author_id, body, id)
+        UPDATE
+          replies
+        SET
+          question_id = ?, parent_reply_id = ?, author_id = ?, body = ?
+        WHERE
+          replies.id = ?
+      SQL
+    end
   end
 
   def author

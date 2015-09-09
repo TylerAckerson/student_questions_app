@@ -1,10 +1,13 @@
+require_relative 'sl_object'
 require_relative 'questions_database'
 require_relative 'user'
 require_relative 'question_follow'
 require_relative 'question'
 require_relative 'question_like'
 
-class Question
+class Question < SQLObject
+  TABLE_NAME = 'questions'
+
   def self.find_by_id(id)
     attributes = QuestionsDatabase.instance.execute(<<-SQL, id).first
       SELECT
@@ -40,6 +43,7 @@ class Question
   end
 
   attr_accessor :title, :body, :author_id
+  attr_reader :id
 
   def initialize(attributes)
     @id = attributes[ "id" ]
@@ -47,6 +51,28 @@ class Question
     @body = attributes[ "body"]
     @author_id = attributes[ "author_id" ]
   end
+
+  def save
+    if self.id.nil?
+      QuestionsDatabase.instance.execute(<<-SQL, title, body, author_id)
+        INSERT INTO
+          questions (title, body, author_id)
+        VALUES
+          (?, ?, ?)
+      SQL
+
+      @id = QuestionsDatabase.instance.last_insert_row_id
+    else
+      QuestionsDatabase.instance.execute(<<-SQL, title, body, author_id, id)
+        UPDATE
+          questions
+        SET
+          title = ?, body = ?, author_id = ?
+        WHERE
+          questions.id = ?
+      SQL
+    end
+end
 
   def author
     attributes = QuestionsDatabase.instance.execute(<<-SQL).first
