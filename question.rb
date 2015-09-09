@@ -1,4 +1,4 @@
-require_relative 'sl_object'
+require_relative 'sql_object'
 require_relative 'questions_database'
 require_relative 'user'
 require_relative 'question_follow'
